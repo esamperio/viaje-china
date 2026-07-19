@@ -200,6 +200,15 @@
   .glegend span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:700}
   .glegend i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   footer .ver{opacity:.6;font-weight:700}
+  .updbar{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(80px);
+    display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--bg);padding:10px 12px 10px 16px;
+    border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:60;font-size:13px;font-weight:700;
+    transition:transform .28s;max-width:calc(100% - 28px)}
+  .updbar.show{transform:translateX(-50%) translateY(0)}
+  .updbar span{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .updbar .ic{width:15px;height:15px}
+  .updbar button{border:none;background:var(--bg);color:var(--ink);font:inherit;font-weight:800;
+    padding:8px 13px;border-radius:10px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -210,7 +219,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <span class="ver">v13</span></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <span class="ver">v14</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -292,6 +301,33 @@ function gastoDialog(titulo,init,cb,onDelete){
   ov.querySelector("#dlgOK").onclick=ok;
   [L,A].forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")ok();}));
 }
+
+/* ---------- AVISO DE VERSIÓN NUEVA ----------
+   Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
+   que el usuario decida: recargar solo le cortaría a media edición. */
+const VER="v14";
+let updVista=false;
+async function chkVer(){
+  if(updVista||!navigator.onLine)return;
+  try{const r=await fetch("version.txt?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return;
+    const v=(await r.text()).trim();
+    if(v&&v!==VER){updVista=true;barraUpd(v);}
+  }catch(e){}}
+function barraUpd(v){
+  if(document.getElementById("updbar"))return;
+  const b=document.createElement("div");b.id="updbar";b.className="updbar";
+  b.innerHTML='<span>'+ic("refresh-cw")+'Versión nueva '+esc(v)+'</span><button id="updGo">Actualizar</button>';
+  document.body.appendChild(b);
+  /* por duplicado a propósito: si el rAF no dispara, la barra se quedaría fuera de pantalla */
+  const ver=()=>b.classList.add("show");
+  requestAnimationFrame(ver);setTimeout(ver,60);
+  b.querySelector("#updGo").onclick=async()=>{
+    b.querySelector("#updGo").textContent="…";
+    /* subimos lo pendiente antes de recargar, para no dejarlo colgado */
+    try{if(sb&&navigator.onLine)await doSync(true);}catch(e){}
+    try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r)await r.update();}}catch(e){}
+    location.reload();};}
 
 /* ---------- SYNC ----------
    Cada dato modificado es una entrada independiente con su clave y su marca de tiempo.
@@ -625,8 +661,10 @@ document.getElementById("syncBtn").onclick=()=>{if(!sb)syncDialog();else doSync(
 document.getElementById("syncBtn").addEventListener("contextmenu",e=>{e.preventDefault();syncDialog();});
 paintSync();
 if(sb)doSync(true);
-window.addEventListener("online",()=>{if(sb)doSync(true);});
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&sb)doSync(true);});
+window.addEventListener("online",()=>{if(sb)doSync(true);chkVer();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)return;if(sb)doSync(true);chkVer();});
+chkVer();                       /* al abrir */
+setInterval(chkVer,15*60*1000); /* y cada 15 min si la dejas abierta */
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 </script>
 </body>
