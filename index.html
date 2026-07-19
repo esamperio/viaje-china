@@ -116,8 +116,9 @@
   .seg button.on[data-m="didi"]{background:var(--didi);color:#fff}
   .legtime{background:none;border:none;color:var(--ink);font:700 13px 'Sora',sans-serif;min-width:30px;text-align:right;font-variant-numeric:tabular-nums;padding:0}
   .legtime small{color:var(--muted);font-weight:400}
-  .legcost{border:none;background:transparent;color:var(--ok);font:700 12px 'Sora',sans-serif;padding:2px 3px;display:inline-flex;align-items:center;gap:2px}
-  .legcost.empty{color:var(--muted);opacity:.6}
+  .legcost{border:1px solid var(--line);background:var(--card);color:var(--ok);font:700 13px 'Sora',sans-serif;padding:6px 11px;border-radius:10px;display:inline-flex;align-items:center;gap:6px}
+  .legcost svg.ic{width:1.15em;height:1.15em}
+  .legcost.empty{color:var(--muted);opacity:.8}
   .legroute{color:var(--transit);text-decoration:none;font-size:16px;display:inline-flex;padding:2px}
 
   .extras{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin:10px 0 4px;padding:13px 15px}
@@ -127,6 +128,32 @@
   .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:50}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+  /* diálogo de gasto */
+  .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+  .dlg{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+  .dlg h4{margin:0 0 6px;font:700 16px 'Sora';display:flex;align-items:center;gap:8px}
+  .dlg label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:12px 0 5px}
+  .dlg input{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink)}
+  .dlg input.amt{font-family:'Sora';font-weight:700;font-size:17px}
+  .dlg .btns{display:flex;gap:9px;margin-top:17px}
+  .dlg .btns button{flex:1;padding:11px;border-radius:11px;font-weight:700;font-size:14px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+  .dlg .btns .ok{background:var(--accent);border-color:var(--accent);color:#fff}
+  /* feedback de arrastre */
+  .dropline{height:4px;border-radius:3px;background:var(--accent);margin:7px 0;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 70%,transparent);position:relative}
+  .dropline:before{content:"";position:absolute;left:-3px;top:-3px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  /* filtros de la vista gastos */
+  .filters{display:flex;gap:7px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .filters button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--muted);padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:700}
+  .filters button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+  .grow2{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .grow2:first-of-type{border-top:none}
+  .grow2 .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .grow2 .c1{flex:1;min-width:0}
+  .grow2 .c1 b{display:block;font-weight:700;font-size:13.5px}
+  .grow2 .c1 span{font-size:11.5px;color:var(--muted)}
+  .grow2 .amt2{font:700 14px 'Sora';white-space:nowrap}
+  .gsub{font-size:12px;color:var(--muted);margin:-4px 0 10px}
   /* vista gastos */
   .gtot{background:linear-gradient(135deg,var(--accent),#7d1c17);color:#fff;border-radius:18px;padding:20px;text-align:center;margin-bottom:16px;box-shadow:var(--shadow)}
   .gtot .n{font:800 40px 'Sora';line-height:1}
@@ -212,7 +239,25 @@ function tripSummary(){const days=[];const byCat={entradas:0,comidas:0,transport
 /* toast/copy */
 let toastT;function toast(m){const el=document.getElementById("toast");el.textContent=m;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),1400);}
 function copy(t){if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast("Copiado")).catch(fb);else fb();function fb(){const a=document.createElement("textarea");a.value=t;a.style.position="fixed";a.style.opacity="0";document.body.appendChild(a);a.select();try{document.execCommand("copy");toast("Copiado");}catch(e){}document.body.removeChild(a);}}
-function askGasto(){const label=prompt("Concepto del gasto:");if(label===null)return null;const a=prompt("Importe en ¥:","");if(a===null)return null;const amount=parseFloat((a||"").replace(",","."));if(isNaN(amount))return null;return {label:label||"Gasto",amount:amount};}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function gastoDialog(titulo,init,cb,onDelete){
+  const ov=document.createElement("div");ov.className="ov";
+  ov.innerHTML='<div class="dlg"><h4>'+ic("wallet")+titulo+'</h4>'
+    +'<label>Concepto</label><input id="dlgL" type="text" autocomplete="off" placeholder="Entrada, Didi, Cena…" value="'+esc(init&&init.label)+'">'
+    +'<label>Importe (¥)</label><input id="dlgA" class="amt" type="number" inputmode="decimal" step="0.01" placeholder="0" value="'+(init&&init.amount!=null?init.amount:"")+'">'
+    +'<div class="btns"><button id="dlgC">Cancelar</button>'+(onDelete?'<button id="dlgD">Borrar</button>':'')+'<button class="ok" id="dlgOK">Guardar</button></div></div>';
+  document.body.appendChild(ov);
+  const L=ov.querySelector("#dlgL"),A=ov.querySelector("#dlgA");
+  setTimeout(()=>{(init&&init.label?A:L).focus();},60);
+  const close=()=>ov.remove();
+  ov.querySelector("#dlgC").onclick=close;
+  ov.addEventListener("click",e=>{if(e.target===ov)close();});
+  if(onDelete)ov.querySelector("#dlgD").onclick=()=>{close();onDelete();};
+  const ok=()=>{const label=(L.value||"").trim()||"Gasto";const amount=parseFloat((A.value||"").replace(",","."));
+    if(isNaN(amount)){A.focus();return;}close();cb({label:label,amount:amount});};
+  ov.querySelector("#dlgOK").onclick=ok;
+  [L,A].forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")ok();}));
+}
 
 /* ---------- RENDER ---------- */
 function renderNav(){document.getElementById("brandIcon").innerHTML=ic("map-pin");const nav=document.getElementById("daynav");nav.innerHTML="";
@@ -235,9 +280,10 @@ function renderDay(){
       let seg="";["walk","transit","didi"].forEach(mk=>{const v=L[mk+"Min"],na=v==null,on=(mk===m&&!na);seg+='<button class="'+(on?"on":"")+' '+(na?"na":"")+'" data-m="'+mk+'" '+(na?"disabled":'data-legk="'+L.key+'"')+' title="'+MODES[mk].lb+(na?"":" · "+v+" min")+'">'+ic(MODES[mk].ic)+'</button>';});
       const a=itemById(day,prev),gc=sum(legGastos(day,L.key));
       const rurl="https://uri.amap.com/navigation?from="+a.gcj[0]+","+a.gcj[1]+","+encodeURIComponent(a.nombre)+"&to="+it.gcj[0]+","+it.gcj[1]+","+encodeURIComponent(it.nombre)+"&mode=bus&coordinate=gaode&callnative=1";
-      h+='<div class="leg"><span class="legdist'+(L.est?' est':'')+'">'+ic("route")+L.distKm+' km'+(L.est?'*':'')+'</span>'
+      h+='<div class="leg">'
+        +'<button class="legcost'+(gc?"":" empty")+'" data-legcost="'+L.key+'" title="Coste del trayecto">'+ic("wallet")+(gc?"¥"+num(gc):"+")+'</button>'
+        +'<span class="legdist'+(L.est?' est':'')+'">'+ic("route")+L.distKm+' km'+(L.est?'*':'')+'</span>'
         +'<div class="seg">'+seg+'</div><button class="legtime" data-editleg="'+L.key+'">'+val+"<small>′</small></button>"
-        +'<button class="legcost'+(gc?"":" empty")+'" data-legcost="'+L.key+'">'+ic("wallet")+(gc?"¥"+num(gc):"")+'</button>'
         +'<a class="legroute" href="'+rurl+'" title="Cómo llegar (Amap: metro/bus)">'+ic("navigation")+'</a></div>';}
     const op=d._open[id]?" open":"";
     if(meal){const gt=sum(gastosOf(day,it));
@@ -262,7 +308,7 @@ function renderDay(){
   h+='</div>';
   // extras del día
   h+='<div class="extras"><h3>'+ic("shopping-bag")+' Gastos extra del día</h3>';
-  d.extras.forEach((g,i)=>{h+='<div class="grow"><span class="gc">'+g.label+'</span><span class="ga">¥'+num(g.amount)+'</span><button class="gx" data-delextra="'+i+'">'+ic("x")+'</button></div>';});
+  d.extras.forEach((g,i)=>{h+='<div class="grow"><span class="gc">'+g.label+'</span><span class="ga">¥'+num(g.amount)+'</span><button class="gx" data-editextra="'+i+'">'+ic("pencil")+'</button><button class="gx" data-delextra="'+i+'">'+ic("x")+'</button></div>';});
   h+='<button class="gadd" data-addextra="1">'+ic("plus")+' Añadir gasto extra</button></div>';
   h+='<div class="endday">'+ic("moon")+' Fin del día</div>';
   document.getElementById("main").innerHTML=h;bindDay(day);
@@ -272,18 +318,41 @@ function gastosBlock(day,it){let h='<div class="gastos"><div class="glabel">'+ic
   h+='<button class="gadd" data-gadd="'+it.id+'">'+ic("plus")+' Añadir gasto</button></div>';return h;}
 function dragHint(){return '<div class="miniact"><span class="draghint">'+ic("grip-vertical")+' mantén pulsado para mover</span></div>';}
 
-function renderGastos(){const S=tripSummary();
+let gFilter="todos";
+function allExpenses(){const out=[];
+  VIAJE.dias.forEach((day,di)=>{const d=ds(day.id);const seq=visibleSeq(day);let prev=null;
+    seq.forEach(({it,isLoc})=>{
+      gastosOf(day,it).forEach(g=>out.push({di,fecha:day.fecha,ciudad:day.ciudad,cat:(it.kind==="meal"?"comidas":"entradas"),src:(it.nombre||it.label),label:g.label,amount:+g.amount||0}));
+      if(isLoc&&prev)legGastos(day,prev.id+">"+it.id).forEach(g=>out.push({di,fecha:day.fecha,ciudad:day.ciudad,cat:"transporte",src:(prev.nombre||prev.label)+" → "+(it.nombre||it.label),label:g.label,amount:+g.amount||0}));
+      if(isLoc)prev=it;});
+    d.extras.forEach(g=>out.push({di,fecha:day.fecha,ciudad:day.ciudad,cat:"extras",src:"Extra del día",label:g.label,amount:+g.amount||0}));});
+  return out;}
+function catBars(byCat){let h="";const max=Math.max(1,...Object.keys(CATS).map(c=>byCat[c]||0));
+  for(const c in CATS){const v=byCat[c]||0;h+='<div class="gbar"><div class="ico" style="background:'+CATS[c].col+'">'+ic(CATS[c].ic)+'</div><div class="txt"><div>'+CATS[c].lb+'</div><div class="track"><div class="fill" style="width:'+(v/max*100)+'%;background:'+CATS[c].col+'"></div></div></div><div class="amt">¥'+num(v)+'</div></div>';}
+  return h;}
+function renderGastos(){const S=tripSummary(),E=allExpenses();
   let h='<div class="dayhead"><div class="date">Todo el viaje</div><div class="city disp">Gastos</div></div>';
   h+='<div class="gtot"><div class="n">¥'+num(S.total)+'</div><div class="l">Total estimado · 2 personas</div></div>';
-  h+='<div class="gcard"><h3>'+ic("chart-pie")+' Por tipo de gasto</h3>';
-  const max=Math.max(1,...Object.values(S.byCat));
-  for(const c in CATS){const v=S.byCat[c];h+='<div class="gbar"><div class="ico" style="background:'+CATS[c].col+'">'+ic(CATS[c].ic)+'</div><div class="txt"><div>'+CATS[c].lb+'</div><div class="track"><div class="fill" style="width:'+(v/max*100)+'%;background:'+CATS[c].col+'"></div></div></div><div class="amt">¥'+num(v)+'</div></div>';}
-  h+='</div>';
-  h+='<div class="gcard"><h3>'+ic("calendar")+' Por día</h3>';
-  S.days.forEach((d,i)=>{h+='<div class="gday"><span>Día '+(i+1)+' · '+d.fecha+' · '+d.ciudad+'</span><b>¥'+num(d.tot)+'</b></div>';});
-  h+='</div>';
+  const F=[["todos","Todos"],["dias","Por día"],["tipo","Por tipo"],["diatipo","Día y tipo"]];
+  h+='<div class="filters">'+F.map(f=>'<button class="'+(gFilter===f[0]?"on":"")+'" data-f="'+f[0]+'">'+f[1]+'</button>').join("")+'</div>';
+
+  if(gFilter==="todos"){
+    h+='<div class="gcard"><h3>'+ic("wallet")+' Todos los gastos</h3><div class="gsub">'+E.length+' apuntes · ordenados por día</div>';
+    if(!E.length)h+='<div class="gsub">Todavía no hay gastos. Añádelos en cada sitio, tramo o comida.</div>';
+    E.sort((a,b)=>a.di-b.di).forEach(e=>{h+='<div class="grow2"><span class="dot" style="background:'+CATS[e.cat].col+'"></span><div class="c1"><b>'+e.label+'</b><span>Día '+(e.di+1)+' · '+e.src+'</span></div><span class="amt2">¥'+num(e.amount)+'</span></div>';});
+    h+='</div>';
+  } else if(gFilter==="tipo"){
+    h+='<div class="gcard"><h3>'+ic("chart-pie")+' Todo el viaje por tipo</h3>'+catBars(S.byCat)+'</div>';
+  } else if(gFilter==="dias"){
+    h+='<div class="gcard"><h3>'+ic("calendar")+' Todo el viaje por días</h3>';
+    S.days.forEach((d,i)=>{h+='<div class="gday"><span>Día '+(i+1)+' · '+d.fecha+' · '+d.ciudad+'</span><b>¥'+num(d.tot)+'</b></div>';});
+    h+='</div>';
+  } else {
+    S.days.forEach((d,i)=>{h+='<div class="gcard"><h3>'+ic("calendar")+' Día '+(i+1)+' · '+d.fecha+' · '+d.ciudad+'</h3><div class="gsub">Total del día: ¥'+num(d.tot)+'</div>'+catBars(d.dt)+'</div>';});
+  }
   h+='<div class="endday">Los gastos se editan en cada sitio, tramo o comida, y en "Gastos extra del día".</div>';
-  document.getElementById("main").innerHTML=h;
+  const main=document.getElementById("main");main.innerHTML=h;
+  main.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>{gFilter=b.dataset.f;renderGastos();}));
 }
 
 /* ---------- BIND (día) ---------- */
@@ -295,11 +364,16 @@ function bindDay(day){const d=ds(day.id),main=document.getElementById("main");
   main.querySelectorAll("[data-hide]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.hide;if(d.hidden[id])delete d.hidden[id];else d.hidden[id]=true;save();renderDay();}));
   main.querySelectorAll("[data-legk]").forEach(b=>b.addEventListener("click",()=>{d.modos[b.dataset.legk]=b.dataset.m;save();renderDay();if(document.getElementById("mapWrap").classList.contains("open"))drawMap(day);}));
   main.querySelectorAll("[data-editleg]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.editleg,v=prompt("Minutos de este tramo:",b.textContent.replace(/\D/g,""));if(v===null)return;const n=parseInt(v,10);if(isNaN(n))delete d.tiempos[k];else d.tiempos[k]=n;save();renderDay();}));
-  main.querySelectorAll("[data-legcost]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.legcost,arr=d.gastos[k]||[];const cur=sum(arr);const v=prompt("Coste del trayecto en ¥ (vacío = borrar):",cur||"");if(v===null)return;const a=parseFloat((v||"").replace(",","."));if(isNaN(a)||a===0)delete d.gastos[k];else d.gastos[k]=[{label:"Trayecto",amount:a}];save();renderDay();}));
-  main.querySelectorAll("[data-gadd]").forEach(b=>b.addEventListener("click",()=>{const g=askGasto();if(!g)return;materialG(day,itemById(day,b.dataset.gadd)).push(g);save();renderDay();}));
-  main.querySelectorAll("[data-gedit]").forEach(b=>b.addEventListener("click",()=>{const[id,i]=b.dataset.gedit.split("|"),arr=materialG(day,itemById(day,id)),g=arr[+i];const v=prompt("Importe de '"+g.label+"' en ¥:",g.amount);if(v===null)return;const a=parseFloat((v||"").replace(",","."));if(!isNaN(a))g.amount=a;save();renderDay();}));
-  main.querySelectorAll("[data-gdel]").forEach(b=>b.addEventListener("click",()=>{const[id,i]=b.dataset.gdel.split("|"),arr=materialG(day,itemById(day,id));arr.splice(+i,1);save();renderDay();}));
-  main.querySelectorAll("[data-addextra]").forEach(b=>b.addEventListener("click",()=>{const g=askGasto();if(!g)return;d.extras.push(g);save();renderDay();}));
+  main.querySelectorAll("[data-legcost]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.legcost,arr=d.gastos[k]||[],cur=arr[0]||{label:"Trayecto",amount:null};
+    gastoDialog("Coste del trayecto",cur,g=>{d.gastos[k]=[g];save();renderDay();},arr.length?()=>{delete d.gastos[k];save();renderDay();}:null);}));
+  main.querySelectorAll("[data-gadd]").forEach(b=>b.addEventListener("click",()=>{const it=itemById(day,b.dataset.gadd);
+    gastoDialog("Nuevo gasto",null,g=>{materialG(day,it).push(g);save();renderDay();});}));
+  main.querySelectorAll("[data-gedit]").forEach(b=>b.addEventListener("click",()=>{const p=b.dataset.gedit.split("|"),arr=materialG(day,itemById(day,p[0])),i=+p[1],g=arr[i];
+    gastoDialog("Editar gasto",g,ng=>{arr[i]=ng;save();renderDay();},()=>{arr.splice(i,1);save();renderDay();});}));
+  main.querySelectorAll("[data-gdel]").forEach(b=>b.addEventListener("click",()=>{const p=b.dataset.gdel.split("|"),arr=materialG(day,itemById(day,p[0]));arr.splice(+p[1],1);save();renderDay();}));
+  main.querySelectorAll("[data-addextra]").forEach(b=>b.addEventListener("click",()=>{gastoDialog("Gasto extra del día",null,g=>{d.extras.push(g);save();renderDay();});}));
+  main.querySelectorAll("[data-editextra]").forEach(b=>b.addEventListener("click",()=>{const i=+b.dataset.editextra,g=d.extras[i];
+    gastoDialog("Editar gasto extra",g,ng=>{d.extras[i]=ng;save();renderDay();},()=>{d.extras.splice(i,1);save();renderDay();});}));
   main.querySelectorAll("[data-delextra]").forEach(b=>b.addEventListener("click",()=>{d.extras.splice(+b.dataset.delextra,1);save();renderDay();}));
   const wrap=document.getElementById("mapWrap");
   document.getElementById("mapToggle").addEventListener("click",()=>{wrap.classList.toggle("open");if(wrap.classList.contains("open"))requestAnimationFrame(()=>{drawMap(day);bindMap(day);});});
@@ -318,14 +392,25 @@ function attachHead(day,head){const d=ds(day.id),item=head.parentElement,id=head
 }
 /* Drag&drop */
 let drag=null;
-function beginDrag(day,item,y){document.body.classList.add("dragging");const list=document.getElementById("list");
-  drag={day,item,id:item.dataset.id,y0:y,dy:0};item.classList.add("drag");if(navigator.vibrate)navigator.vibrate(15);}
+function beginDrag(day,item,y){document.body.classList.add("dragging");
+  const line=document.createElement("div");line.className="dropline";
+  drag={day,item,id:item.dataset.id,y0:y,dy:0,line:line,target:null};
+  item.classList.add("drag");item.after(line);
+  if(navigator.vibrate)navigator.vibrate(15);}
 function dragMove(y){if(!drag)return;drag.dy=y-drag.y0;drag.item.style.transform="translateY("+drag.dy+"px)";
-  const items=[...document.querySelectorAll("#list .item")];const mid=drag.item.getBoundingClientRect().top+drag.item.offsetHeight/2;
-  drag.target=null;for(const el of items){if(el===drag.item)continue;const r=el.getBoundingClientRect();if(mid<r.top+r.height/2){drag.target=el;break;}}}
-function endDrag(day){document.body.classList.remove("dragging");if(!drag){return;}
-  const d=ds(day.id),ord=orderedIds(day),from=ord.indexOf(drag.id);ord.splice(from,1);
-  if(drag.target){const tid=drag.target.dataset.id;let ti=ord.indexOf(tid);ord.splice(ti,0,drag.id);}else ord.push(drag.id);
+  const list=document.getElementById("list");if(!list)return;
+  const items=[...list.querySelectorAll(".item")].filter(el=>el!==drag.item);
+  let target=null;
+  for(const el of items){const r=el.getBoundingClientRect();if(y<r.top+r.height/2){target=el;break;}}
+  drag.target=target;
+  // mover la línea indicadora a la posición de destino
+  if(target)list.insertBefore(drag.line,target);else list.appendChild(drag.line);}
+function endDrag(day){document.body.classList.remove("dragging");if(!drag)return;
+  if(drag.line&&drag.line.parentElement)drag.line.remove();
+  drag.item.style.transform="";drag.item.classList.remove("drag");
+  const d=ds(day.id),ord=orderedIds(day),from=ord.indexOf(drag.id);
+  if(from>=0)ord.splice(from,1);
+  if(drag.target){const ti=ord.indexOf(drag.target.dataset.id);ord.splice(ti<0?ord.length:ti,0,drag.id);}else ord.push(drag.id);
   d.order=ord;save();drag=null;renderDay();}
 
 /* ---------- MAPA ---------- */
