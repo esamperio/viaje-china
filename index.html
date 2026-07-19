@@ -18,6 +18,8 @@
   @media (prefers-color-scheme: dark){:root{--bg:#15120e;--card:#1e1a15;--ink:#ece6db;--muted:#9a9184;--line:#2d2820;--accent:#e26a5f;--accent-soft:#2c1815;--gold:#cda45f;--ok:#4fb37a;--shadow:0 4px 20px rgba(0,0,0,.4);--walk:#4fb37a;--transit:#5fa0e0;--didi:#e0ad55;--meal:#d3a45e;}}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{max-width:100%;overflow-x:hidden}
+  /* iOS Safari hace zoom al enfocar cualquier campo de menos de 16px y NO lo deshace */
+  input,textarea,select{font-size:16px}
   body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.5 'Nunito Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   body.dragging{touch-action:none;user-select:none}
   .disp{font-family:'Sora','Nunito Sans',-apple-system,sans-serif}
@@ -37,7 +39,7 @@
   .dayhead .city{font-size:31px;font-weight:700;letter-spacing:-.2px;line-height:1.05}
   .startedit{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:11px;font-size:14px;box-shadow:var(--shadow)}
   .startedit .g{color:var(--accent)}
-  .startedit input{font:inherit;font-family:'Sora',sans-serif;font-weight:700;color:var(--ink);background:transparent;border:none;border-bottom:2px dotted var(--accent);padding:2px;margin-left:auto;width:82px}
+  .startedit input{font:inherit;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--ink);background:transparent;border:none;border-bottom:2px dotted var(--accent);padding:2px;margin-left:auto;width:82px}
   .note{background:var(--accent-soft);border-radius:12px;padding:11px 13px;font-size:12.5px;margin-bottom:14px;display:flex;gap:10px;line-height:1.45}
   .note .g{color:var(--accent);margin-top:1px;flex:0 0 auto}
   .mapbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:700;font-size:14px;padding:13px;border-radius:14px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -133,13 +135,12 @@
   .dlg{background:var(--card);border-radius:18px;padding:18px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
   .dlg h4{margin:0 0 6px;font:700 16px 'Sora';display:flex;align-items:center;gap:8px}
   .dlg label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:12px 0 5px}
-  .dlg input{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink)}
+  .dlg input{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink)}
   .dlg input.amt{font-family:'Sora';font-weight:700;font-size:17px}
   .dlg .btns{display:flex;gap:9px;margin-top:17px}
   .dlg .btns button{flex:1;padding:11px;border-radius:11px;font-weight:700;font-size:14px;border:1px solid var(--line);background:transparent;color:var(--ink)}
   .dlg .btns .ok{background:var(--accent);border-color:var(--accent);color:#fff}
   .dlg .dlgnote{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted);text-transform:none;letter-spacing:0}
-  .dlg input[type=url],.dlg input[type=text]{font-size:13px}
   .brand .btxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .syncbtn{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;
     border:1px solid var(--line);background:transparent;color:var(--muted);font:inherit;font-size:10.5px;
@@ -194,6 +195,7 @@
   .glegend{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
   .glegend span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:700}
   .glegend i{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+  footer .ver{opacity:.6;font-weight:700}
 </style>
 </head>
 <body>
@@ -203,7 +205,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión.</footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <span class="ver">v12</span></footer>
 <div class="toast" id="toast"></div>
 
 <script>
