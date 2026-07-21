@@ -44,10 +44,6 @@
   .startedit{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:11px;font-size:14px;box-shadow:var(--shadow)}
   .startedit .g{color:var(--accent)}
   .startedit input{font:inherit;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--ink);background:var(--accent-soft);border:1px solid var(--line);border-radius:9px;padding:5px 8px;margin-left:auto;width:96px}
-  /* Etiqueta de horario editable (hora fija del tren/vuelo): misma etiqueta azul, pulsable */
-  .tag.hours.edit{cursor:pointer;font:inherit;font-weight:700;border:1px solid transparent}
-  .tag.hours.edit svg:last-child{width:11px;height:11px;opacity:.6}
-  .tag.hours.edit.on{border-color:var(--transit)}
   .note{background:var(--accent-soft);border-radius:12px;padding:11px 13px;font-size:12.5px;margin-bottom:14px;display:flex;gap:10px;line-height:1.45}
   .note .g{color:var(--accent);margin-top:1px;flex:0 0 auto}
   .mapbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:700;font-size:14px;padding:13px;border-radius:14px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -328,7 +324,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v35 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v36 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -430,7 +426,7 @@ function gastoDialog(titulo,init,cb,onDelete){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v35";
+const VER="v36";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -900,7 +896,10 @@ function renderDay(){
     } else {if(!hid)n++;const free=!(it.costeCny>0),gt=sum(gastosOf(day,it));
       let tags='<span class="tag">'+ic(TIPO_IC[it.tipo]||"map-pin")+it.tipo+'</span>';
       const hor=d.horarios[id]!=null?d.horarios[id]:it.horario;
-      if(hor)tags+='<button class="tag hours edit'+(d.horarios[id]!=null?" on":"")+'" data-edithorario="'+id+'" title="Pulsa para editar el horario">'+ic("clock")+esc(hor)+ic("pencil")+'</button>';
+      // Solo las paradas de tipo Transporte llevan el horario editable (como la etiqueta de
+      // tiempo de visita: mismo aspecto, se pulsa y se edita). El resto va estático como siempre.
+      if(hor){const trans=it.tipo&&it.tipo.indexOf("Transporte")>=0;
+        tags+='<span class="tag hours"'+(trans?' data-edithorario="'+id+'"':'')+'>'+ic("clock")+esc(hor)+'</span>';}
       if(gt)tags+='<span class="tag cost">'+ic("wallet")+'¥'+num(gt)+' · 2p</span>';
       tags+='<span class="tag dur" data-editvisit="'+id+'">'+ic("clock")+fmtDur(visitMin(day,it))+'</span>';
       const amap="https://uri.amap.com/search?keyword="+encodeURIComponent(it.amapKeyword)+"&src=viajechina&coordinate=gaode&callnative=1";
