@@ -43,7 +43,11 @@
   .dayhead .city{font-size:31px;font-weight:700;letter-spacing:-.2px;line-height:1.05}
   .startedit{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:11px;font-size:14px;box-shadow:var(--shadow)}
   .startedit .g{color:var(--accent)}
-  .startedit input{font:inherit;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--ink);background:transparent;border:none;border-bottom:2px dotted var(--accent);padding:2px;margin-left:auto;width:82px}
+  .startedit input{font:inherit;font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--ink);background:var(--accent-soft);border:1px solid var(--line);border-radius:9px;padding:5px 8px;margin-left:auto;width:96px}
+  /* Hora de tren/vuelo editable: la llegada/salida se puede fijar a una hora concreta */
+  .tfix{font:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+  .tfix.on{color:var(--accent);font-weight:800}
+  .tfix.on svg{width:12px;height:12px}
   .note{background:var(--accent-soft);border-radius:12px;padding:11px 13px;font-size:12.5px;margin-bottom:14px;display:flex;gap:10px;line-height:1.45}
   .note .g{color:var(--accent);margin-top:1px;flex:0 0 auto}
   .mapbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-weight:700;font-size:14px;padding:13px;border-radius:14px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -324,7 +328,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v33 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v34 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -340,8 +344,15 @@ const LS="viajeChina.v7";
 function load(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}}
 function save(){saveLocal();stampChanges();queuePush();}
-let state=load(); let current=0; let ultimoDia=0; const mapState={}; let userGCJ=null; let mapSel=null; let mapSelR=null;
-function ds(id){const s=state[id]||(state[id]={});s.hidden=s.hidden||{};s.visitas=s.visitas||{};s.modos=s.modos||{};s.tiempos=s.tiempos||{};s.gastos=s.gastos||{};s.extras=s.extras||[];s.comidas=s.comidas||{};s.nota=s.nota||{};s._open=s._open||{};return s;}
+// Día que toca HOY: se abre por el día cuya fecha coincide con la de hoy (o el último ya pasado).
+// El viaje es de julio-agosto de 2026, así que el año se fija a 2026. Antes de empezar el viaje
+// (o si hoy no cae en ningún día montado) cae al día 1. `current` no se persiste: cada vez que se
+// abre la app se recalcula, así que siempre arranca en el día correcto.
+function diaDeHoy(){const n=new Date();const hoy=n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate();
+  let best=-1;VIAJE.dias.forEach((d,i)=>{const m=/^(\d{1,2})\/(\d{1,2})/.exec(d.fecha||"");if(!m)return;
+    const val=2026*10000+(+m[2])*100+(+m[1]);if(val<=hoy)best=i;});return best<0?0:best;}
+let state=load(); let current=diaDeHoy(); let ultimoDia=current; const mapState={}; let userGCJ=null; let mapSel=null; let mapSelR=null;
+function ds(id){const s=state[id]||(state[id]={});s.hidden=s.hidden||{};s.visitas=s.visitas||{};s.modos=s.modos||{};s.tiempos=s.tiempos||{};s.gastos=s.gastos||{};s.extras=s.extras||[];s.comidas=s.comidas||{};s.nota=s.nota||{};s.fijo=s.fijo||{};s._open=s._open||{};return s;}
 function toMin(h){const p=h.split(":");return +p[0]*60+ +p[1];}
 function toHHMM(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");}
 function fmtDur(m){const h=Math.floor(m/60),mm=m%60;return (h?h+"h":"")+(mm?(h?" ":"")+mm+"m":(h?"":"0m"));}
@@ -364,8 +375,24 @@ function legData(day,aId,bId){const key=aId+">"+bId,pre=day.legs[key];if(pre)ret
 function legMode(day,L){const d=ds(day.id);let m=d.modos[L.key];if(!m)m=(L.walkMin!=null&&L.distKm<1.6)?"walk":"didi";if(L[m+"Min"]==null){for(const x of["didi","transit","walk"])if(L[x+"Min"]!=null){m=x;break;}}return m;}
 function legVal(day,L){const d=ds(day.id),m=legMode(day,L);return d.tiempos[L.key]!=null?d.tiempos[L.key]:L[m+"Min"];}
 function visibleSeq(day){const d=ds(day.id);return orderedIds(day).map(id=>itemById(day,id)).filter(it=>it&&!d.hidden[it.id]).map(it=>({it,isLoc:it.kind!=="meal"||!!it.gcj}));}
-function schedule(day){let t=toMin(ds(day.id).start||day.horaInicio),prev=null;const out={};
-  visibleSeq(day).forEach(({it,isLoc})=>{if(isLoc&&prev){const L=legData(day,prev.id,it.id);t+=legVal(day,L);}out[it.id]={arr:t,dep:t+visitMin(day,it)};t+=visitMin(day,it);if(isLoc)prev=it;});return out;}
+function schedule(day){const d=ds(day.id);let t=toMin(d.start||day.horaInicio),prev=null;const out={};const fj=d.fijo||{};
+  visibleSeq(day).forEach(({it,isLoc})=>{if(isLoc&&prev){const L=legData(day,prev.id,it.id);t+=legVal(day,L);}
+    // Hora fija (trenes/vuelos): si el usuario la fija, ancla la llegada y/o la salida a esa hora
+    // de reloj (en vez del cálculo aditivo), y el resto del día fluye desde ahí. Resuelve además
+    // que la app "no sabía esperar" a un tren de hora fija.
+    const f=fj[it.id];let arr=t;if(f&&f.arr!=null){const v=toMin(f.arr);if(isFinite(v))arr=v;}
+    let dep=arr+visitMin(day,it);if(f&&f.dep!=null){const v=toMin(f.dep);if(isFinite(v))dep=v;}
+    out[it.id]={arr:arr,dep:dep,fixArr:!!(f&&f.arr!=null),fixDep:!!(f&&f.dep!=null)};t=dep;if(isLoc)prev=it;});return out;}
+
+// Fija (o quita) la hora de reloj de llegada/salida de una parada de tren/vuelo. Vacío = automática.
+function fijarHora(day,id,campo){const d=ds(day.id);const it=itemById(day,id);const et=campo==="arr"?"llegada":"salida";
+  const cur=(d.fijo[id]&&d.fijo[id][campo])||"";
+  const v=prompt("Hora de "+et+" de «"+(it&&(it.nombre||it.label))+"» (HH:MM).\nDéjalo vacío para volver a la hora automática:",cur);
+  if(v===null)return;const t=v.trim();
+  if(t===""){if(d.fijo[id]){delete d.fijo[id][campo];if(d.fijo[id].arr==null&&d.fijo[id].dep==null)delete d.fijo[id];}}
+  else{const m=/^(\d{1,2}):(\d{2})$/.exec(t);if(!m||+m[1]>23||+m[2]>59){toast("Escribe la hora como HH:MM");return;}
+    d.fijo[id]=d.fijo[id]||{};d.fijo[id][campo]=(+m[1])+":"+m[2];}
+  save();renderDay();}
 
 /* gastos */
 function gastosOf(day,it){const d=ds(day.id),k=it.id;if(d.gastos[k])return d.gastos[k];if(it.kind==="place"&&it.costeCny>0)return [{label:"Entrada",amount:it.costeCny}];return [];}
@@ -410,7 +437,7 @@ function gastoDialog(titulo,init,cb,onDelete){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v33";
+const VER="v34";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -474,6 +501,8 @@ function exportEntries(){const e={};
     /* nota escrita por nosotros en cada sitio. Texto plano; el prefijo "not." no choca con
        "com" (comidas) ni con "notas" del dato del lugar (que es fijo y no viaja). */
     for(const k in d.nota)if(d.nota[k])e[P+"not."+k]=d.nota[k];
+    /* hora fija de trenes/vuelos: {arr,dep} en HH:MM. Prefijo "fix." (no choca con nada). */
+    for(const k in d.fijo)if(d.fijo[k]&&(d.fijo[k].arr!=null||d.fijo[k].dep!=null))e[P+"fix."+k]=d.fijo[k];
     for(const slot in d.gastos){e[P+"gm."+slot]=1;
       d.gastos[slot].forEach(g=>{if(!g.id)g.id=gid();e[P+"g."+g.id]={s:slot,l:g.label,a:g.amount};});}
     (d.extras||[]).forEach(g=>{if(!g.id)g.id=gid();e[P+"g."+g.id]={s:"_x",l:g.label,a:g.amount};});
@@ -482,7 +511,7 @@ function exportEntries(){const e={};
 /* entradas -> estado local (los gastos se reconstruyen enteros desde las entradas) */
 function applySnap(){
   VIAJE.dias.forEach(day=>{const d=ds(day.id);
-    d.hidden={};d.visitas={};d.modos={};d.tiempos={};d.gastos={};d.extras=[];d.comidas={};d.nota={};delete d.order;delete d.start;});
+    d.hidden={};d.visitas={};d.modos={};d.tiempos={};d.gastos={};d.extras=[];d.comidas={};d.nota={};d.fijo={};delete d.order;delete d.start;});
   const gs={};
   for(const k in sync.snap){const e=sync.snap[k];if(e.v==null)continue;
     const i=k.indexOf(".");if(i<0)continue;
@@ -499,6 +528,7 @@ function applySnap(){
     else if(t==="tim")d.tiempos[id]=e.v;
     else if(t==="com")d.comidas[id]=e.v;
     else if(t==="not")d.nota[id]=e.v;
+    else if(t==="fix"){if(e.v&&typeof e.v==="object")d.fijo[id]=e.v;}
     else if(t==="gm"){d.gastos[id]=d.gastos[id]||[];}
     else if(t==="g"&&e.v&&e.v.s)(gs[dayId]=gs[dayId]||[]).push({id:id,s:e.v.s,l:e.v.l,a:e.v.a});}
   for(const dayId in gs){const d=ds(dayId);
@@ -881,9 +911,12 @@ function renderDay(){
       tags+='<span class="tag dur" data-editvisit="'+id+'">'+ic("clock")+fmtDur(visitMin(day,it))+'</span>';
       const amap="https://uri.amap.com/search?keyword="+encodeURIComponent(it.amapKeyword)+"&src=viajechina&coordinate=gaode&callnative=1";
       let addr="";if(it.direccion||it.direccionCn){addr='<div class="addr">';if(it.direccion)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccion+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccion)+'">'+ic("copy")+'</button></div>';if(it.direccionCn)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccionCn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccionCn)+'">'+ic("copy")+'</button></div>';addr+='</div>';}
+      const esTrans=!hid&&it.tipo&&it.tipo.indexOf("Transporte")>=0;
+      const arrHtml=hid?"—":(esTrans?'<button class="tfix'+(s.fixArr?" on":"")+'" data-fixarr="'+id+'" title="Hora de llegada (pulsa para fijarla)">'+(s.fixArr?ic("pencil"):"")+toHHMM(s.arr)+'</button>':toHHMM(s.arr));
+      const depHtml=hid?"oculto":(esTrans?'<button class="tfix'+(s.fixDep?" on":"")+'" data-fixdep="'+id+'" title="Hora de salida (pulsa para fijarla)">'+(s.fixDep?ic("pencil"):"")+'sale '+toHHMM(s.dep)+'</button>':'sale '+toHHMM(s.dep));
       h+='<div class="item'+(hid?" hidden":"")+op+'" data-id="'+id+'"><div class="head" data-id="'+id+'"><div class="num'+(free?" free":"")+'">'+(hid?ic("eye-off"):n)+'</div>'
         +'<div class="pmain"><div class="pname">'+it.nombre+'</div>'+(it.cn?'<div class="cnrow"><span class="pcn">'+it.cn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.cn)+'">'+ic("copy")+'ZH</button></div>':'')+'<div class="ptags">'+tags+'</div></div>'
-        +'<div class="rcol"><button class="eye" data-hide="'+id+'">'+ic(hid?"eye":"eye-off")+'</button><div class="times"><div class="tarr">'+(hid?"—":toHHMM(s.arr))+'</div><div class="tdep">'+(hid?"oculto":"sale "+toHHMM(s.dep))+'</div></div><span class="chev">'+ic("chevron-down")+'</span></div></div>'
+        +'<div class="rcol"><button class="eye" data-hide="'+id+'">'+ic(hid?"eye":"eye-off")+'</button><div class="times"><div class="tarr">'+arrHtml+'</div><div class="tdep">'+depHtml+'</div></div><span class="chev">'+ic("chevron-down")+'</span></div></div>'
         +'<div class="body">'+it.resumen+(it.notas?'<div class="notas">'+ic("info")+'<span>'+it.notas+'</span></div>':'')+addr+gastosBlock(day,it)+notaBlock(day,it)
         +'<div class="miniact"><a class="amap" href="'+amap+'">'+ic("map-pin")+' Amap</a><span class="draghint">'+ic("grip-vertical")+' mantén pulsado para mover</span></div></div></div>';
       if(!hid)prev=id;}
@@ -975,6 +1008,8 @@ function bindDay(day){const d=ds(day.id),main=document.getElementById("main");
   main.querySelectorAll("[data-hide]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();const id=b.dataset.hide;if(d.hidden[id])delete d.hidden[id];else d.hidden[id]=true;save();renderDay();}));
   main.querySelectorAll("[data-legk]").forEach(b=>b.addEventListener("click",()=>{d.modos[b.dataset.legk]=b.dataset.m;save();renderDay();if(document.getElementById("mapWrap").classList.contains("open"))drawMap(day);}));
   main.querySelectorAll("[data-editleg]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.editleg,v=prompt("Minutos de este tramo:",b.textContent.replace(/\D/g,""));if(v===null)return;const n=parseInt(v,10);if(isNaN(n))delete d.tiempos[k];else d.tiempos[k]=n;save();renderDay();}));
+  main.querySelectorAll("[data-fixarr]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();fijarHora(day,b.dataset.fixarr,"arr");}));
+  main.querySelectorAll("[data-fixdep]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();fijarHora(day,b.dataset.fixdep,"dep");}));
   main.querySelectorAll("[data-legcost]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.legcost,arr=d.gastos[k]||[],cur=arr[0]||{label:"Trayecto",amount:null};
     gastoDialog("Coste del trayecto",cur,g=>{d.gastos[k]=[g];save();renderDay();},arr.length?()=>{delete d.gastos[k];save();renderDay();}:null);}));
   main.querySelectorAll("[data-gadd]").forEach(b=>b.addEventListener("click",()=>{const it=itemById(day,b.dataset.gadd);
