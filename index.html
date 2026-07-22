@@ -353,7 +353,7 @@
   <div class="searchres" id="searchRes"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v43 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v44 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -514,7 +514,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v43";
+const VER="v44";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -987,6 +987,10 @@ function renderDay(){
     +'<div class="mapbar"><button id="zin">'+ic("plus")+'</button><button id="zout">'+ic("minus")+'</button><button id="zfit">'+ic("route")+'</button><button class="locate" id="locBtn">'+ic("locate-fixed")+' Mi ubicación</button></div></div>';
   h+='<div id="list">';
   const order=orderedIds(day);let n=0,prev=null;
+  // Hoteles de inicio y fin del día (primer y último lugar no-comida): sin checks. Los hoteles
+  // intermedios (check-in) llevan solo "Visitado". "Entrada" solo en lo que no es hotel.
+  const placeIds=order.filter(id=>{const x=itemById(day,id);return x&&x.kind!=="meal";});
+  const firstPlace=placeIds[0],lastPlace=placeIds[placeIds.length-1];
   order.forEach(id=>{const it=itemById(day,id);if(!it)return;const hid=!!d.hidden[id],meal=it.kind==="meal"&&!it.gcj,s=sched[id];
     if(!hid&&!meal&&prev!=null){const L=legData(day,prev,id),m=legMode(day,L),val=legVal(day,L);
       let seg="";["walk","transit","didi"].forEach(mk=>{const v=L[mk+"Min"],na=v==null,on=(mk===m&&!na);seg+='<button class="'+(on?"on":"")+' '+(na?"na":"")+'" data-m="'+mk+'" '+(na?"disabled":'data-legk="'+L.key+'"')+' title="'+MODES[mk].lb+(na?"":" · "+v+" min")+'">'+ic(MODES[mk].ic)+'</button>';});
@@ -1006,10 +1010,16 @@ function renderDay(){
         +'<div class="body">'+comidaBlock(day,it)+gastosBlock(day,it)+dragHint()+'</div></div>';
     } else {if(!hid)n++;const free=!(it.costeCny>0),gt=sum(gastosOf(day,it));
       const isDone=!!d.done[id],isTik=!!d.ticket[id];
-      // Dos checks por actividad: "Visitado" (verde) y "Entrada" comprada (azul). Van en la
-      // cabecera, siempre visibles, y se pulsan sin abrir la ficha (stopPropagation en bindDay).
-      let checks='<button class="chk done'+(isDone?" on":"")+'" data-done="'+id+'" title="Marcar como visitado">'+ic(isDone?"circle-check":"check")+'<span>'+(isDone?"Visitado":"Visitar")+'</span></button>'
-        +'<button class="chk tik'+(isTik?" on":"")+'" data-ticket="'+id+'" title="Marcar entrada comprada">'+ic("ticket")+'<span>'+(isTik?"Entrada ✓":"Entrada")+'</span></button>';
+      const isHotel=it.tipo==="Hotel",isBookend=(id===firstPlace||id===lastPlace);
+      // Checks en la cabecera (se pulsan sin abrir la ficha, stopPropagation en bindDay):
+      //  - hotel de inicio/fin del día: NINGÚN check.
+      //  - hotel intermedio (check-in): solo "Visitado".
+      //  - resto: "Visitado" (verde) + "Entrada comprada" (azul).
+      let checks="";
+      if(!(isHotel&&isBookend)){
+        checks='<button class="chk done'+(isDone?" on":"")+'" data-done="'+id+'" title="Marcar como visitado">'+ic(isDone?"circle-check":"check")+'<span>'+(isDone?"Visitado":"Visitar")+'</span></button>';
+        if(!isHotel)checks+='<button class="chk tik'+(isTik?" on":"")+'" data-ticket="'+id+'" title="Marcar entrada comprada">'+ic("ticket")+'<span>'+(isTik?"Entrada ✓":"Entrada")+'</span></button>';
+      }
       let tags='<span class="tag">'+ic(TIPO_IC[it.tipo]||"map-pin")+it.tipo+'</span>';
       const hor=d.horarios[id]!=null?d.horarios[id]:it.horario;
       // Solo las paradas de tipo Transporte llevan el horario editable (como la etiqueta de
@@ -1021,7 +1031,7 @@ function renderDay(){
       const amap="https://uri.amap.com/search?keyword="+encodeURIComponent(it.amapKeyword)+"&src=viajechina&coordinate=gaode&callnative=1";
       let addr="";if(it.direccion||it.direccionCn){addr='<div class="addr">';if(it.direccion)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccion+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccion)+'">'+ic("copy")+'</button></div>';if(it.direccionCn)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccionCn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccionCn)+'">'+ic("copy")+'</button></div>';addr+='</div>';}
       h+='<div class="item'+(hid?" hidden":"")+op+'" data-id="'+id+'"><div class="head" data-id="'+id+'"><div class="num'+(free?" free":"")+'">'+(hid?ic("eye-off"):n)+'</div>'
-        +'<div class="pmain"><div class="pname">'+it.nombre+'</div>'+(it.cn?'<div class="cnrow"><span class="pcn">'+it.cn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.cn)+'">'+ic("copy")+'ZH</button></div>':'')+'<div class="checks">'+checks+'</div><div class="ptags">'+tags+'</div></div>'
+        +'<div class="pmain"><div class="pname">'+it.nombre+'</div>'+(it.cn?'<div class="cnrow"><span class="pcn">'+it.cn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.cn)+'">'+ic("copy")+'ZH</button></div>':'')+(checks?'<div class="checks">'+checks+'</div>':'')+'<div class="ptags">'+tags+'</div></div>'
         +'<div class="rcol"><button class="eye" data-hide="'+id+'">'+ic(hid?"eye":"eye-off")+'</button><div class="times"><div class="tarr">'+(hid?"—":toHHMM(s.arr))+'</div><div class="tdep">'+(hid?"oculto":"sale "+toHHMM(s.dep))+'</div></div><span class="chev">'+ic("chevron-down")+'</span></div></div>'
         +'<div class="body">'+it.resumen+(it.notas?'<div class="notas">'+ic("info")+'<span>'+it.notas+'</span></div>':'')+addr+gastosBlock(day,it)+notaBlock(day,it)
         +'<div class="miniact"><a class="amap" href="'+amap+'" data-amapkw="'+encodeURIComponent(it.amapKeyword||"")+'" data-amaplat="'+(it.gcj?it.gcj[0]:"")+'" data-amaplng="'+(it.gcj?it.gcj[1]:"")+'" data-amapnm="'+encodeURIComponent(it.cn||it.nombre||"")+'">'+ic("map-pin")+' Amap</a><span class="draghint">'+ic("grip-vertical")+' mantén pulsado para mover</span></div></div></div>';
