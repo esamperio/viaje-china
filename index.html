@@ -326,7 +326,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v39 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v40 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -438,7 +438,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v39";
+const VER="v40";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -654,12 +654,12 @@ function amapUrl(r){return "https://uri.amap.com/search?keyword="+encodeURICompo
    app no está (seguimos aquí tras ~1 s), abrimos la web. dev=0 = coordenadas en GCJ/gaode. */
 function amapWebUrl(kw,gcj){return "https://uri.amap.com/search?keyword="+encodeURIComponent(kw||"")
   +(gcj?"&center="+gcj[0]+","+gcj[1]:"")+"&src=viajechina&coordinate=gaode&callnative=1";}
-function abrirAmap(kw,gcj,nombre){
+function abrirAmap(kw,gcj,nombre){   // OJO: gcj = [lng, lat] (igual que it.gcj del build)
   const web=amapWebUrl(kw,gcj);
   if(!gcj){location.href=web;return;}
   const ios=/iP(hone|ad|od)/.test(navigator.userAgent);
   const app=(ios?"iosamap":"androidamap")+"://viewMap?sourceApplication=viajechina&poiname="
-    +encodeURIComponent(nombre||kw||"")+"&lat="+gcj[0]+"&lon="+gcj[1]+"&dev=0";
+    +encodeURIComponent(nombre||kw||"")+"&lat="+gcj[1]+"&lon="+gcj[0]+"&dev=0";
   let saltado=false;const cancelar=()=>{saltado=true;};
   window.addEventListener("pagehide",cancelar,{once:true});
   window.addEventListener("blur",cancelar,{once:true});
