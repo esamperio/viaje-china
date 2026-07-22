@@ -326,7 +326,7 @@
   <div class="daynav" id="daynav"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v40 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v41 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -438,7 +438,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v40";
+const VER="v41";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -1107,7 +1107,17 @@ function drawMap(day){const cv=document.getElementById("mapCanvas");if(!cv)retur
   let html="";const tx0=Math.floor(left/256),tx1=Math.floor((left+W)/256),ty0=Math.floor(top/256),ty1=Math.floor((top+H)/256);
   for(let tx=tx0;tx<=tx1;tx++)for(let ty=ty0;ty<=ty1;ty++){if(ty<0||ty>=n)continue;const wx=((tx%n)+n)%n;html+='<img class="tile" style="left:'+(tx*256-left)+'px;top:'+(ty*256-top)+'px" src="https://webrd0'+((wx%4)+1)+'.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x='+wx+'&y='+ty+'&z='+z+'">';}
   const acc=getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#a5282a';const seq=locSeq(day);let paths="";
-  for(let i=0;i<seq.length-1;i++){const L=legData(day,seq[i].id,seq[i+1].id),g=(legMode(day,L)==="walk"&&L.geomWalk)?L.geomWalk:(L.geomDrive||[seq[i].gcj,seq[i+1].gcj]);let pts="";[seq[i].gcj].concat(g,[seq[i+1].gcj]).forEach(c=>{const s=P(c[0],c[1]);pts+=s[0].toFixed(1)+","+s[1].toFixed(1)+" ";});paths+='<polyline points="'+pts+'" fill="none" stroke="'+acc+'" stroke-width="4" stroke-opacity="0.85" stroke-linecap="round" stroke-linejoin="round"/>';}
+  for(let i=0;i<seq.length-1;i++){const L=legData(day,seq[i].id,seq[i+1].id),g=(legMode(day,L)==="walk"&&L.geomWalk)?L.geomWalk:(L.geomDrive||[seq[i].gcj,seq[i+1].gcj]);
+    /* Proyecta la geometría completa (pin origen + tramo + pin destino). Si la ruta de OSRM da
+       muchas más vueltas que la recta (datos de conducción malos en ciudades montañosas como
+       Chongqing: 200 m que se van por 4 km de puentes), la sustituye por una línea recta entre
+       los dos pines. El mapa es esquemático — para navegar de verdad está el botón de Amap. */
+    const full=[seq[i].gcj].concat(g,[seq[i+1].gcj]).map(c=>P(c[0],c[1]));
+    let plen=0;for(let k=1;k<full.length;k++)plen+=Math.hypot(full[k][0]-full[k-1][0],full[k][1]-full[k-1][1]);
+    const recta=Math.hypot(full[full.length-1][0]-full[0][0],full[full.length-1][1]-full[0][1]);
+    const usar=(recta>10&&plen>recta*2.6)?[full[0],full[full.length-1]]:full;
+    let pts="";usar.forEach(s=>{pts+=s[0].toFixed(1)+","+s[1].toFixed(1)+" ";});
+    paths+='<polyline points="'+pts+'" fill="none" stroke="'+acc+'" stroke-width="4" stroke-opacity="0.85" stroke-linecap="round" stroke-linejoin="round"/>';}
   html+='<svg class="route" width="'+W+'" height="'+H+'">'+paths+'</svg>';
   seq.forEach((it,i)=>{const s=P(it.gcj[0],it.gcj[1]);html+='<div class="pin" data-pin="'+i+'" style="left:'+s[0]+'px;top:'+s[1]+'px"><svg width="27" height="27" viewBox="0 0 27 27"><path d="M13.5 1C7.7 1 3 5.7 3 11.5 3 19 13.5 26 13.5 26S24 19 24 11.5C24 5.7 19.3 1 13.5 1z" fill="'+acc+'"/></svg><b>'+(i+1)+'</b></div>';});
   /* restaurantes de la ciudad del día, en color distinto al de la ruta */
