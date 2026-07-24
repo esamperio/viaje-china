@@ -146,7 +146,6 @@
   .tag.cost{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
   .tag.hours{color:var(--transit);background:color-mix(in srgb,var(--transit) 12%,transparent)}
   .tag.dur{color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent)}
-  .tag.wait{color:var(--muted);background:var(--bg);border:1px dashed var(--line)}
   .rcol{flex:0 0 auto;display:flex;gap:7px;align-items:flex-start}
   .eye{border:none;background:transparent;color:var(--muted);padding:2px;font-size:14px;opacity:.55}
   .times{text-align:right;font-variant-numeric:tabular-nums}
@@ -207,6 +206,11 @@
   .dlg h4{margin:0 0 6px;font:700 16px 'Sora';display:flex;align-items:center;gap:8px}
   .dlg label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:12px 0 5px}
   .dlg input,.dlg select{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink)}
+  /* iOS le da a los input de hora/fecha un ancho INTRÍNSECO que ignora el width:100% y se salen
+     del diálogo por los lados. Con appearance:none y min-width:0 se dejan encoger. */
+  .dlg input[type="time"],.dlg input[type="date"]{-webkit-appearance:none;appearance:none;
+    display:block;min-width:0;max-width:100%}
+  .dlg input[type="time"]::-webkit-date-and-time-value{text-align:left;margin:0}
   .dlg select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 11px center;padding-right:34px}
   .dlg input.amt{font-family:'Sora';font-weight:700;font-size:17px}
   .dlg .btns{display:flex;gap:9px;margin-top:17px}
@@ -388,7 +392,7 @@
   <div class="searchres" id="searchRes"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v49 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v50 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -595,7 +599,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v49";
+const VER="v50";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -1138,13 +1142,16 @@ function renderDay(){
         horEd=!!(it.tipo&&it.tipo.indexOf("Transporte")>=0);
       }
       if(hor)tags+='<span class="tag hours"'+(horEd?' data-edithorario="'+id+'"':'')+'>'+ic("clock")+esc(hor)+'</span>';
-      // Espera REAL en la estación (el tren sale a su hora, así que es salida − llegada a la
-      // estación). Solo en la parada desde la que sale un tren, y solo si de verdad se espera.
+      if(gt)tags+='<span class="tag cost">'+ic("wallet")+'¥'+num(gt)+' · 2p</span>';
+      // La etiqueta amarilla es "cuánto rato estamos aquí". En una estación de la que sale un
+      // tren, ese rato ES la espera (salida − llegada a la estación), no la visitaMin: la fija el
+      // horario del tren, así que se muestra calculada y NO se edita a mano (editarla no movería
+      // nada porque schedule() ancla la salida). En el resto de sitios, igual que siempre.
       const _nx=day.legs[id+">p"+(parseInt(id.slice(1),10)+1)];
       if(_nx&&trenHoras(day,_nx)&&!hid&&s.dep>s.arr)
-        tags+='<span class="tag wait">'+ic("clock")+'espera '+fmtDur(s.dep-s.arr)+'</span>';
-      if(gt)tags+='<span class="tag cost">'+ic("wallet")+'¥'+num(gt)+' · 2p</span>';
-      tags+='<span class="tag dur" data-editvisit="'+id+'">'+ic("clock")+fmtDur(visitMin(day,it))+'</span>';
+        tags+='<span class="tag dur" title="Espera hasta que sale el tren">'+ic("clock")+fmtDur(s.dep-s.arr)+'</span>';
+      else
+        tags+='<span class="tag dur" data-editvisit="'+id+'">'+ic("clock")+fmtDur(visitMin(day,it))+'</span>';
       const amap="https://uri.amap.com/search?keyword="+encodeURIComponent(it.amapKeyword)+"&src=viajechina&coordinate=gaode&callnative=1";
       let addr="";if(it.direccion||it.direccionCn){addr='<div class="addr">';if(it.direccion)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccion+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccion)+'">'+ic("copy")+'</button></div>';if(it.direccionCn)addr+='<div class="line">'+ic("map-pin")+'<span>'+it.direccionCn+'</span><button class="cpy" data-copy="'+encodeURIComponent(it.direccionCn)+'">'+ic("copy")+'</button></div>';addr+='</div>';}
       h+='<div class="item'+(hid?" hidden":"")+op+'" data-id="'+id+'"><div class="head" data-id="'+id+'"><div class="num'+(free?" free":"")+'">'+(hid?ic("eye-off"):n)+'</div>'
