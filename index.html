@@ -421,6 +421,14 @@
   .kmtrack{height:7px;border-radius:5px;background:var(--line);margin:4px 0 2px;overflow:hidden}
   .kmfill{height:100%;border-radius:5px}
   .kmpc{font-size:11px;color:var(--muted)}
+  .dlg.km .kmextra{border-top:1px solid var(--line);margin-top:14px;padding-top:8px}
+  .kmxrow{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);padding:5px 0}
+  .kmxrow svg{width:17px;height:17px;flex:none;color:var(--muted)}
+  .kmxrow span{flex:1}
+  .kmxrow b{color:var(--ink);font-size:14.5px}
+  .kmxrow.tot{color:var(--ink);font-weight:700}
+  .kmxrow.tot svg,.kmxrow.tot b{color:var(--accent)}
+  .kmxrow.tot b{font-size:16px}
   .homego{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:15px;font-size:15.5px;font-weight:800;cursor:pointer;font-family:'Sora',sans-serif;box-shadow:0 6px 18px rgba(165,40,42,.3)}
   .homego svg{width:19px;height:19px}
   /* --- chip de km en la vista de día --- */
@@ -443,7 +451,7 @@
   <div class="searchres" id="searchRes"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v53 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v54 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -651,7 +659,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v53";
+const VER="v54";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -1141,65 +1149,60 @@ function renderNav(){document.getElementById("brandIcon").innerHTML=ic("map-pin"
   const act=nav.querySelector("button.active");
   if(act)nav.scrollLeft=Math.max(0,act.offsetLeft-(nav.clientWidth-act.offsetWidth)/2);}
 /* ======================= KILÓMETROS RECORRIDOS =======================
-   La ruta terrestre es la concatenación, día a día en orden, de los tramos entre paradas
-   localizadas visibles (igual que los pinta renderDay: se saltan las comidas sin sitio y las
-   ocultas). "Recorrido" = suma de tramos hasta la parada MÁS AVANZADA marcada como Visitada; así
-   los hoteles/paradas sin check (que no se pueden marcar) se cuentan solos en cuanto marcas el
-   siguiente destino. Los vuelos van aparte: la IDA (Madrid·Chengdu·Pekín) cuenta en cuanto has
-   llegado (marcas cualquier cosa) y la VUELTA (Shanghái·Doha·Madrid) al marcar la última parada. */
+   Solo se cuenta lo REALMENTE recorrido: la ruta terrestre es la concatenación, día a día en
+   orden, de los tramos entre paradas visibles; se suman los tramos hasta la parada MÁS AVANZADA
+   marcada como Visitada (los hoteles/paradas sin check se cuentan solos al marcar el siguiente
+   destino). Hasta que no se recorre, no se suma. Los vuelos van APARTE del número de tierra: la
+   IDA (Madrid·Chengdu·Pekín) cuenta al llegar (marcar cualquier cosa) y la VUELTA (Shanghái·Doha·
+   Madrid) al marcar la última parada. Cada tramo de tierra se clasifica por su modo (andar /
+   bus-metro / Didi) o por ser tren. */
 const VUELO_IDA=[[-3.5676,40.4936],[103.9471,30.5785],[116.5846,40.0801]];   // MAD · CTU · PEK
 const VUELO_VUELTA=[[121.8083,31.1443],[51.6081,25.2731],[-3.5676,40.4936]]; // PVG · DOH · MAD
 function kmVuelo(pts){let s=0;for(let i=1;i<pts.length;i++)s+=haversine(pts[i-1],pts[i]);return s;}
 const KM_IDA=kmVuelo(VUELO_IDA), KM_VUELTA=kmVuelo(VUELO_VUELTA);
-function rutaViaje(){   // paradas en orden real de recorrido, con el tramo de entrada a cada una
+function rutaViaje(){   // paradas en orden real, con el tramo de entrada a cada una y su tipo
   const out=[];
   VIAJE.dias.forEach(day=>{const d=ds(day.id);let prev=null;
     orderedIds(day).forEach(id=>{const it=itemById(day,id);if(!it)return;
       const hid=!!d.hidden[id],meal=it.kind==="meal"&&!it.gcj;
       if(hid||meal)return;
-      let legIn=0;if(prev!=null)legIn=(legData(day,prev,id).distKm)||0;
-      out.push({dayId:day.id,id,legIn});prev=id;});});
+      let legIn=0,cat=null;
+      if(prev!=null){const L=legData(day,prev,id);legIn=L.distKm||0;
+        if(L.tren)cat="tren";else{const m=legMode(day,L);cat=m==="walk"?"andando":m==="transit"?"transporte":"coche";}}
+      out.push({dayId:day.id,id:id,legIn:legIn,cat:cat});prev=id;});});
   return out;}
 function kmInfo(){
   const R=rutaViaje();let furthest=-1;
   R.forEach((s,i)=>{if(ds(s.dayId).done[s.id])furthest=i;});
-  let tierraHecha=0;for(let i=0;i<=furthest;i++)tierraHecha+=R[i].legIn;
-  let tierraTotal=0;R.forEach(s=>tierraTotal+=s.legIn);
+  const tipos={tren:0,transporte:0,coche:0,andando:0};
+  for(let i=0;i<=furthest;i++){const s=R[i];if(s.cat)tipos[s.cat]+=s.legIn;}
   const anyDone=furthest>=0, allDone=R.length>0&&furthest===R.length-1;
-  const rec=tierraHecha+(anyDone?KM_IDA:0)+(allDone?KM_VUELTA:0);
-  const tot=tierraTotal+KM_IDA+KM_VUELTA;
-  return {rec:rec,tot:tot,tierraHecha:tierraHecha,anyDone:anyDone,allDone:allDone};}
+  const vuelos=(anyDone?KM_IDA:0)+(allDone?KM_VUELTA:0);
+  const tierra=tipos.tren+tipos.transporte+tipos.coche+tipos.andando;
+  return {tipos:tipos,vuelos:vuelos,tierra:tierra,total:tierra+vuelos};}
 function fmtKm(v){return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,".")+" km";}
 function kmLineHTML(){const k=kmInfo();
-  return '<button class="kmline" id="kmLine">'+ic("footprints")+'<b>'+fmtKm(k.rec)+'</b> recorridos <span>de '+fmtKm(k.tot)+'</span>'+ic("chevron-right")+'</button>';}
-/* Desglose de TODO el viaje por medio de transporte. Los tramos de tierra se clasifican por el
-   modo elegido en cada uno (andar / bus-metro / Didi); los de tren por su marca `tren`; y los dos
-   vuelos aparte. Devuelve km por tipo. */
-function kmDesglose(){
-  const b={vuelos:KM_IDA+KM_VUELTA,tren:0,transporte:0,coche:0,andando:0};
-  VIAJE.dias.forEach(day=>{const d=ds(day.id);let prev=null;
-    orderedIds(day).forEach(id=>{const it=itemById(day,id);if(!it)return;
-      const hid=!!d.hidden[id],meal=it.kind==="meal"&&!it.gcj;if(hid||meal)return;
-      if(prev!=null){const L=legData(day,prev,id),km=L.distKm||0;
-        if(L.tren)b.tren+=km;
-        else{const m=legMode(day,L);b[m==="walk"?"andando":m==="transit"?"transporte":"coche"]+=km;}}
-      prev=id;});});
-  return b;}
-const KM_TIPOS=[["vuelos","Vuelos","plane","#2f6db0"],["tren","Tren","tram-front","#a5282a"],
+  return '<button class="kmline" id="kmLine">'+ic("footprints")+'<b>'+fmtKm(k.tierra)+'</b> recorridos'
+    +'<span>'+(k.vuelos?"+"+fmtKm(k.vuelos)+" vuelos · ":"")+fmtKm(k.total)+' total</span>'+ic("chevron-right")+'</button>';}
+/* Tipos de TIERRA para el desglose (los vuelos se muestran aparte, no como una fila más). */
+const KM_TIPOS=[["tren","Tren","tram-front","#a5282a"],
   ["transporte","Transporte público","bus","#3c7a54"],["coche","Coche / Didi","car-front","#c9871f"],
   ["andando","Andando","footprints","#9a6d2f"]];
 function kmDialog(){
-  const b=kmDesglose(),tot=KM_TIPOS.reduce((s,t)=>s+b[t[0]],0),max=Math.max(1,...KM_TIPOS.map(t=>b[t[0]]));
+  const k=kmInfo(),max=Math.max(1,...KM_TIPOS.map(t=>k.tipos[t[0]]));
   let rows="";
-  KM_TIPOS.forEach(t=>{const v=b[t[0]],pc=tot?Math.round(v/tot*100):0;
+  KM_TIPOS.forEach(t=>{const v=k.tipos[t[0]],pc=k.tierra?Math.round(v/k.tierra*100):0;
     rows+='<div class="kmrow"><div class="kmic" style="background:'+t[3]+'">'+ic(t[2])+'</div>'
       +'<div class="kmtxt"><div class="kmtop"><span>'+t[1]+'</span><b>'+fmtKm(v)+'</b></div>'
       +'<div class="kmtrack"><div class="kmfill" style="width:'+(v/max*100)+'%;background:'+t[3]+'"></div></div>'
-      +'<div class="kmpc">'+pc+'% del viaje</div></div></div>';});
-  const ov=document.createElement("div");ov.className="ov";
-  ov.innerHTML='<div class="dlg km"><h4>'+ic("route")+'Kilómetros por tipo</h4>'
-    +'<div class="kmtot"><div class="n">'+fmtKm(tot)+'</div><div class="l">Total del viaje · Madrid ida y vuelta incluidos</div></div>'
-    +rows+'<div class="btns"><button class="ok" id="kmX">Cerrar</button></div></div>';
+      +'<div class="kmpc">'+pc+'% por tierra</div></div></div>';});
+  const ov=document.createElement("div");ov.className="ov";ov.style.zIndex="300";  /* por encima de la home (200) */
+  ov.innerHTML='<div class="dlg km"><h4>'+ic("route")+'Kilómetros recorridos</h4>'
+    +'<div class="kmtot"><div class="n">'+fmtKm(k.tierra)+'</div><div class="l">Recorrido por tierra</div></div>'
+    +rows
+    +'<div class="kmextra"><div class="kmxrow">'+ic("plane")+'<span>Vuelos</span><b>'+fmtKm(k.vuelos)+'</b></div>'
+    +'<div class="kmxrow tot">'+ic("route")+'<span>Total con vuelos</span><b>'+fmtKm(k.total)+'</b></div></div>'
+    +'<div class="btns"><button class="ok" id="kmX">Cerrar</button></div></div>';
   document.body.appendChild(ov);
   const close=()=>ov.remove();
   ov.querySelector("#kmX").onclick=close;
@@ -1253,7 +1256,7 @@ function renderHome(){
   el.innerHTML='<div class="homeinner">'
     +'<div class="hometop"><div class="hometitle">China 2026</div><div class="homesub">29 jul – 24 ago · Enrique y Elena</div></div>'
     +'<div class="homemap"><svg viewBox="0 0 '+VB_W+' '+VB_H+'" preserveAspectRatio="xMidYMid meet"><path class="chland" d="'+CHINA_PATH+'"/></svg>'+pins+'</div>'
-    +'<button class="homekm" id="homeKm">'+ic("footprints")+'<div><b>'+fmtKm(k.rec)+'</b> recorridos<span>de '+fmtKm(k.tot)+' · toca para ver el desglose</span></div>'+ic("chevron-right")+'</button>'
+    +'<button class="homekm" id="homeKm">'+ic("footprints")+'<div><div class="kmbig"><b>'+fmtKm(k.tierra)+'</b> recorridos</div><span>'+(k.vuelos?"+ "+fmtKm(k.vuelos)+" de vuelos · ":"")+fmtKm(k.total)+' en total · toca para el desglose</span></div>'+ic("chevron-right")+'</button>'
     +'<button class="homego" id="homeGo">'+ic("calendar")+' Ver el itinerario de hoy</button>'
     +'</div>';
   el.querySelectorAll(".mpin").forEach(b=>b.onclick=()=>{const c=CIUDADES_MAPA[+b.dataset.city];current=primerDiaCiudad(c.match);ultimoDia=current;hideHome();render();window.scrollTo(0,0);});
