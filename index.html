@@ -383,9 +383,9 @@
   /* --- Pantalla de inicio (mapa de China) --- */
   .brandhome{cursor:pointer}
   body.homeon{overflow:hidden}
-  .home{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;overflow:auto;padding:calc(env(safe-area-inset-top) + 6px) 18px calc(20px + env(safe-area-inset-bottom))}
-  .home.show{display:flex}
-  .homeinner{margin:auto;width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px}
+  .home{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;overflow-y:auto;overflow-x:hidden;padding:calc(env(safe-area-inset-top) + 6px) 18px calc(20px + env(safe-area-inset-bottom))}
+  .home.show{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .homeinner{margin:auto;width:100%;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:16px}
   .hometop{text-align:center}
   .hometitle{font-family:'Sora',sans-serif;font-weight:800;font-size:30px;color:var(--accent);letter-spacing:.5px}
   .homesub{color:var(--muted);font-size:13.5px;margin-top:3px}
@@ -393,8 +393,8 @@
   .homemap svg{position:absolute;inset:0;width:100%;height:100%}
   .chland{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3;stroke-linejoin:round}
   .mpin{position:absolute;transform:translate(-50%,-50%);background:none;border:none;padding:0;cursor:pointer;z-index:3;-webkit-tap-highlight-color:transparent}
-  .mdot{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent);color:var(--accent);box-shadow:0 3px 10px rgba(0,0,0,.28)}
-  .mdot svg{width:21px;height:21px}
+  .mdot{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent);color:var(--accent);box-shadow:0 3px 10px rgba(0,0,0,.28);overflow:hidden}
+  .mdot svg{width:24px;height:24px}
   .mpin:active .mdot{transform:scale(.9)}
   .mlbl{position:absolute;font-size:11.5px;font-weight:800;color:var(--ink);background:color-mix(in srgb,var(--card) 90%,transparent);padding:1px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.22)}
   .mpin.lp-b .mlbl{top:36px;left:50%;transform:translateX(-50%)}
@@ -424,7 +424,7 @@
   <div class="searchres" id="searchRes"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v51 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v52 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -631,7 +631,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v51";
+const VER="v52";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -1168,15 +1168,18 @@ const MONU={
  karst:'<path d="M2,17 Q6,7 10,17"/><path d="M8,17 Q13,5 18,17"/><path d="M15,17 Q19,9 22,17"/><path d="M2,20 q2,1.2 4,0 t4,0 t4,0 t4,0"/>',
  perla:'<path d="M12,1.5 V19"/><circle cx="12" cy="6.5" r="2.3"/><circle cx="12" cy="12" r="1.6"/><path d="M12,17 L8,21 M12,17 L16,21 M8,21 H16"/>'
 };
-function monIc(n){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(MONU[n]||"")+'</svg>';}
+/* viewBox con margen (-2..26) para que ningún trazo toque el borde del círculo del pin */
+function monIc(n){return '<svg viewBox="-2 -2 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(MONU[n]||"")+'</svg>';}
+/* Posiciones SEPARADAS a propósito (no son las reales): en el cluster central las ciudades se
+   montaban y no se podían pinchar. El usuario prefiere pines bien espaciados a ubicación exacta. */
 const CIUDADES_MAPA=[
- {label:"Pekín",match:"Beijing",x:699.8,y:277.4,mon:"muralla",lp:"r"},
- {label:"Xi'an",match:"Xi'an",x:578.3,y:390.6,mon:"guerrero",lp:"l"},
- {label:"Chengdu",match:"Chengdu",x:498.7,y:463.1,mon:"panda",lp:"l"},
- {label:"Chongqing",match:"Chongqing",x:539.2,y:485.2,mon:"hongya",lp:"b"},
- {label:"Zhangjiajie",match:"Zhangjiajie",x:603.3,y:494.1,mon:"pilares",lp:"r"},
- {label:"Guilin",match:"Guilin",x:600.2,y:571.5,mon:"karst",lp:"b"},
- {label:"Shanghai",match:"Shanghai",x:782.5,y:451.7,mon:"perla",lp:"l"}
+ {label:"Pekín",match:"Beijing",x:720,y:285,mon:"muralla",lp:"l"},
+ {label:"Xi'an",match:"Xi'an",x:560,y:360,mon:"guerrero",lp:"l"},
+ {label:"Chengdu",match:"Chengdu",x:370,y:470,mon:"panda",lp:"r"},
+ {label:"Chongqing",match:"Chongqing",x:500,y:545,mon:"hongya",lp:"b"},
+ {label:"Zhangjiajie",match:"Zhangjiajie",x:660,y:500,mon:"pilares",lp:"b"},
+ {label:"Guilin",match:"Guilin",x:620,y:620,mon:"karst",lp:"b"},
+ {label:"Shanghai",match:"Shanghai",x:770,y:440,mon:"perla",lp:"l"}
 ];
 function primerDiaCiudad(match){
   let i=VIAJE.dias.findIndex(d=>d.ciudad===match);
