@@ -380,19 +380,51 @@
   .updbar .ic{width:15px;height:15px}
   .updbar button{border:none;background:var(--bg);color:var(--ink);font:inherit;font-weight:800;
     padding:8px 13px;border-radius:10px;white-space:nowrap}
+  /* --- Pantalla de inicio (mapa de China) --- */
+  .brandhome{cursor:pointer}
+  body.homeon{overflow:hidden}
+  .home{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;overflow:auto;padding:calc(env(safe-area-inset-top) + 6px) 18px calc(20px + env(safe-area-inset-bottom))}
+  .home.show{display:flex}
+  .homeinner{margin:auto;width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px}
+  .hometop{text-align:center}
+  .hometitle{font-family:'Sora',sans-serif;font-weight:800;font-size:30px;color:var(--accent);letter-spacing:.5px}
+  .homesub{color:var(--muted);font-size:13.5px;margin-top:3px}
+  .homemap{position:relative;width:100%;aspect-ratio:1000/722}
+  .homemap svg{position:absolute;inset:0;width:100%;height:100%}
+  .chland{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3;stroke-linejoin:round}
+  .mpin{position:absolute;transform:translate(-50%,-50%);background:none;border:none;padding:0;cursor:pointer;z-index:3;-webkit-tap-highlight-color:transparent}
+  .mdot{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent);color:var(--accent);box-shadow:0 3px 10px rgba(0,0,0,.28)}
+  .mdot svg{width:21px;height:21px}
+  .mpin:active .mdot{transform:scale(.9)}
+  .mlbl{position:absolute;font-size:11.5px;font-weight:800;color:var(--ink);background:color-mix(in srgb,var(--card) 90%,transparent);padding:1px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.22)}
+  .mpin.lp-b .mlbl{top:36px;left:50%;transform:translateX(-50%)}
+  .mpin.lp-r .mlbl{left:24px;top:50%;transform:translateY(-50%)}
+  .mpin.lp-l .mlbl{right:24px;top:50%;transform:translateY(-50%)}
+  .homekm{display:flex;align-items:center;gap:11px;justify-content:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:var(--shadow)}
+  .homekm>svg{width:22px;height:22px;color:var(--accent);flex:none}
+  .homekm b{font-size:22px;color:var(--ink)}
+  .homekm span{color:var(--muted);font-size:12px;display:block;margin-top:1px}
+  .homego{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:#fff;border:none;border-radius:14px;padding:15px;font-size:15.5px;font-weight:800;cursor:pointer;font-family:'Sora',sans-serif;box-shadow:0 6px 18px rgba(165,40,42,.3)}
+  .homego svg{width:19px;height:19px}
+  /* --- chip de km en la vista de día --- */
+  .kmline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 12px;padding:9px 13px;background:var(--card);border:1px solid var(--line);border-radius:11px}
+  .kmline svg{width:16px;height:16px;color:var(--accent);flex:none}
+  .kmline b{color:var(--ink);font-size:15px}
+  .kmline span{margin-left:auto;font-size:12px}
 </style>
 </head>
 <body>
 <div class="statusbar"></div>
+<div id="home" class="home"></div>
 <header>
-  <div class="brand"><span class="g" id="brandIcon"></span><span class="btxt">China</span>
+  <div class="brand"><span class="g brandhome" id="brandIcon"></span><span class="btxt brandhome" id="brandTxt">China</span>
     <div class="hactions"><button class="hbtn" id="searchBtn" title="Buscar"></button><button class="hbtn" id="calBtn" title="Ir a un día"></button><button class="syncbtn" id="syncBtn"></button></div></div>
   <div class="daynav" id="daynav"></div>
   <div class="searchrow" id="searchRow"><span class="ic" id="searchIco"></span><input id="searchInput" type="search" placeholder="Buscar actividad, lugar o ciudad…" autocomplete="off" spellcheck="false"><button id="searchClear" title="Borrar"></button></div>
   <div class="searchres" id="searchRes"></div>
 </header>
 <main id="main"></main>
-<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v50 · Buscar actualización</button></footer>
+<footer>Mantén pulsado un sitio para arrastrarlo y reordenar. Los cambios se guardan en este móvil y se sincronizan con el otro cuando hay conexión. <br><button class="verbtn" id="verBtn">v51 · Buscar actualización</button></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -599,7 +631,7 @@ function gastoDialog(titulo,init,cb,onDelete,defaultCat){
 /* ---------- AVISO DE VERSIÓN NUEVA ----------
    Pregunta por un fichero de 3 bytes, no recarga nada. Si hay versión nueva avisa y deja
    que el usuario decida: recargar solo le cortaría a media edición. */
-const VER="v50";
+const VER="v51";
 let updVista=false;
 /* Lo lanza SOLO el usuario, desde el botón del pie. Sin comprobaciones automáticas: él sabe
    cuándo se ha publicado algo, y así nada le interrumpe por su cuenta. */
@@ -628,8 +660,15 @@ function barraUpd(v){
     b.querySelector("#updGo").textContent="…";
     /* subimos lo pendiente antes de recargar, para no dejarlo colgado */
     try{if(sb&&navigator.onLine)await doSync(true);}catch(e){}
-    try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r)await r.update();}}catch(e){}
-    location.reload();};}
+    /* Con el SW en caché-primero, recargar a secas volvería a servir la versión vieja: hay que
+       reinstalar el SW (trae el index.html nuevo) y recargar cuando el SW nuevo tome el control.
+       `controllerchange` (registrado en el arranque) hace la recarga; dejamos un plan B por si el
+       SW no estuviera disponible o tardara demasiado. */
+    updIniciado=true;
+    try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r)await r.update();else recargaUpd();}else recargaUpd();}catch(e){recargaUpd();}
+    setTimeout(recargaUpd,5000);};}
+let updIniciado=false,updRecargando=false;
+function recargaUpd(){if(updRecargando)return;updRecargando=true;location.reload();}
 
 /* ---------- SYNC ----------
    Cada dato modificado es una entrada independiente con su clave y su marca de tiempo.
@@ -1081,6 +1120,89 @@ function renderNav(){document.getElementById("brandIcon").innerHTML=ic("map-pin"
   /* centrar en la tira el dia que se esta viendo (p.ej. al saltar desde el calendario) */
   const act=nav.querySelector("button.active");
   if(act)nav.scrollLeft=Math.max(0,act.offsetLeft-(nav.clientWidth-act.offsetWidth)/2);}
+/* ======================= KILÓMETROS RECORRIDOS =======================
+   La ruta terrestre es la concatenación, día a día en orden, de los tramos entre paradas
+   localizadas visibles (igual que los pinta renderDay: se saltan las comidas sin sitio y las
+   ocultas). "Recorrido" = suma de tramos hasta la parada MÁS AVANZADA marcada como Visitada; así
+   los hoteles/paradas sin check (que no se pueden marcar) se cuentan solos en cuanto marcas el
+   siguiente destino. Los vuelos van aparte: la IDA (Madrid·Chengdu·Pekín) cuenta en cuanto has
+   llegado (marcas cualquier cosa) y la VUELTA (Shanghái·Doha·Madrid) al marcar la última parada. */
+const VUELO_IDA=[[-3.5676,40.4936],[103.9471,30.5785],[116.5846,40.0801]];   // MAD · CTU · PEK
+const VUELO_VUELTA=[[121.8083,31.1443],[51.6081,25.2731],[-3.5676,40.4936]]; // PVG · DOH · MAD
+function kmVuelo(pts){let s=0;for(let i=1;i<pts.length;i++)s+=haversine(pts[i-1],pts[i]);return s;}
+const KM_IDA=kmVuelo(VUELO_IDA), KM_VUELTA=kmVuelo(VUELO_VUELTA);
+function rutaViaje(){   // paradas en orden real de recorrido, con el tramo de entrada a cada una
+  const out=[];
+  VIAJE.dias.forEach(day=>{const d=ds(day.id);let prev=null;
+    orderedIds(day).forEach(id=>{const it=itemById(day,id);if(!it)return;
+      const hid=!!d.hidden[id],meal=it.kind==="meal"&&!it.gcj;
+      if(hid||meal)return;
+      let legIn=0;if(prev!=null)legIn=(legData(day,prev,id).distKm)||0;
+      out.push({dayId:day.id,id,legIn});prev=id;});});
+  return out;}
+function kmInfo(){
+  const R=rutaViaje();let furthest=-1;
+  R.forEach((s,i)=>{if(ds(s.dayId).done[s.id])furthest=i;});
+  let tierraHecha=0;for(let i=0;i<=furthest;i++)tierraHecha+=R[i].legIn;
+  let tierraTotal=0;R.forEach(s=>tierraTotal+=s.legIn);
+  const anyDone=furthest>=0, allDone=R.length>0&&furthest===R.length-1;
+  const rec=tierraHecha+(anyDone?KM_IDA:0)+(allDone?KM_VUELTA:0);
+  const tot=tierraTotal+KM_IDA+KM_VUELTA;
+  return {rec:rec,tot:tot,tierraHecha:tierraHecha,anyDone:anyDone,allDone:allDone};}
+function fmtKm(v){return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,".")+" km";}
+function kmLineHTML(){const k=kmInfo();
+  return '<div class="kmline">'+ic("footprints")+'<b>'+fmtKm(k.rec)+'</b> recorridos <span>de '+fmtKm(k.tot)+'</span></div>';}
+
+/* ======================= PANTALLA DE INICIO =======================
+   Mapa dibujado de China (silueta simplificada) con las 7 ciudades grandes; cada pin lleva un
+   icono de su monumento y al tocarlo lleva al PRIMER día del itinerario en esa ciudad. Debajo,
+   un botón que lleva al día real de hoy (el itinerario "normal"). Se muestra cada vez que se abre. */
+const CHINA_PATH="M601.0,704.0 L586.9,713.6 L573.5,707.4 L573.0,690.1 L581.1,681.0 L598.9,675.4 L608.3,675.8 L611.9,683.5 L604.7,692.4 L601.0,704.0Z M883.5,79.2 L911.9,85.6 L931.2,99.9 L937.8,118.8 L962.6,118.8 L976.7,110.9 L1003.7,105.0 L995.1,123.0 L988.8,130.4 L983.2,152.4 L972.2,172.0 L952.4,168.4 L938.4,175.5 L942.7,192.7 L940.4,216.5 L932.0,217.0 L932.1,227.2 L921.6,215.4 L915.1,226.6 L889.9,235.3 L892.5,245.9 L878.4,245.2 L870.6,238.9 L859.4,253.1 L841.4,263.9 L828.2,276.8 L805.3,282.7 L793.3,292.1 L775.8,297.5 L784.4,288.2 L781.0,280.4 L793.9,266.9 L785.3,256.4 L771.1,263.5 L752.7,277.4 L742.6,290.4 L726.6,291.4 L718.3,300.8 L726.9,314.3 L740.3,317.6 L740.8,326.7 L753.7,332.5 L772.0,318.2 L786.5,326.0 L797.0,326.5 L799.7,337.1 L776.6,342.7 L769.0,353.5 L753.1,363.6 L744.7,377.7 L762.3,388.7 L768.7,408.5 L778.6,426.9 L789.7,442.4 L789.4,457.3 L779.2,462.8 L783.1,473.5 L792.7,479.8 L790.2,496.1 L786.0,512.1 L776.9,513.9 L765.0,535.6 L751.8,562.0 L736.7,586.0 L714.2,604.5 L691.5,621.5 L673.1,623.8 L663.2,632.7 L657.5,626.2 L648.3,636.2 L625.5,646.2 L608.2,649.3 L602.7,670.5 L593.6,671.7 L589.4,657.1 L593.2,649.4 L571.3,642.9 L563.6,646.2 L547.2,641.0 L539.4,632.8 L542.0,621.2 L527.1,617.6 L519.2,610.0 L505.3,620.7 L489.5,623.0 L476.5,622.9 L467.7,627.9 L459.2,630.8 L461.7,653.8 L453.0,653.2 L451.5,648.5 L451.1,640.2 L439.1,646.1 L432.0,642.4 L419.9,634.8 L424.7,618.1 L414.3,614.2 L410.4,595.7 L393.2,599.1 L395.2,575.2 L410.6,558.4 L411.3,541.8 L410.8,526.5 L403.7,521.7 L398.2,509.8 L388.7,511.3 L371.1,508.3 L376.6,499.9 L369.0,487.4 L357.3,495.9 L343.7,490.9 L324.9,503.7 L310.0,518.7 L296.8,521.2 L289.7,515.8 L281.1,515.3 L269.4,510.6 L260.6,515.7 L249.8,530.7 L248.5,514.8 L238.5,519.1 L219.5,517.1 L201.0,512.5 L187.8,503.7 L175.1,499.7 L169.6,490.1 L160.5,487.2 L144.0,474.1 L130.9,467.9 L124.2,472.7 L101.5,458.6 L85.5,445.9 L80.9,423.8 L92.6,426.5 L93.1,416.2 L86.6,405.9 L88.3,389.5 L70.8,366.0 L43.9,357.8 L39.1,342.4 L27.0,333.0 L24.1,327.2 L21.7,315.8 L22.3,308.0 L12.4,303.4 L7.0,305.4 L2.9,286.8 L7.5,282.2 L5.3,277.5 L20.8,268.0 L32.1,264.1 L49.4,266.8 L55.5,253.9 L76.5,251.6 L82.3,243.6 L108.0,232.7 L110.3,228.1 L109.0,216.7 L120.2,211.5 L105.5,176.5 L137.8,168.5 L146.1,164.0 L157.9,128.0 L190.3,134.7 L199.4,125.6 L200.1,105.4 L213.7,103.5 L226.1,90.2 L232.5,88.5 L236.8,102.5 L250.5,113.2 L273.7,120.7 L285.0,136.9 L278.7,160.4 L284.6,169.1 L304.0,172.6 L325.9,175.4 L345.7,187.9 L355.7,190.1 L363.2,208.7 L372.7,220.6 L390.7,220.1 L424.4,224.6 L446.1,221.8 L462.2,224.8 L486.3,237.0 L506.1,237.0 L513.3,243.3 L532.3,232.5 L558.6,225.5 L583.1,224.7 L602.2,217.7 L613.9,206.9 L625.3,200.1 L622.6,193.5 L617.4,185.8 L626.0,172.8 L635.2,174.6 L651.9,178.7 L668.2,168.0 L693.1,160.3 L705.0,147.0 L716.5,141.3 L740.2,138.6 L753.1,140.9 L754.9,133.7 L740.1,119.7 L727.0,113.2 L714.4,120.7 L698.4,117.5 L689.1,120.1 L684.9,111.9 L696.4,91.8 L704.4,76.6 L724.0,84.2 L747.0,71.5 L746.8,62.7 L761.5,41.3 L770.6,34.9 L770.4,23.8 L761.5,19.0 L774.9,9.0 L795.2,5.4 L816.8,4.8 L841.2,10.8 L855.6,18.2 L865.7,38.5 L871.8,47.2 L877.4,59.5 L883.5,79.2Z";
+const VB_W=1000, VB_H=722;
+const MONU={
+ muralla:'<path d="M2,21 V12 H4 V10 H6 V12 H9 V10 H11 V12 H14 V10 H16 V12 H19 V10 H21 V12 H22 V21 Z"/>',
+ guerrero:'<path d="M12,2.2 V4"/><circle cx="12" cy="7" r="3"/><path d="M6,21 V18 a6,6 0 0 1 12,0 V21"/>',
+ panda:'<circle cx="12" cy="13" r="6.4"/><circle cx="6.9" cy="7.8" r="2.1"/><circle cx="17.1" cy="7.8" r="2.1"/><circle cx="9.6" cy="12" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="12" r="1.05" fill="currentColor" stroke="none"/><path d="M12,15 v1.5"/>',
+ hongya:'<path d="M12,2.5 L20,8 H4 Z"/><path d="M6.5,11.5 H17.5 L15,8 H9 Z"/><path d="M6,20 H18"/><path d="M8.5,20 V12 M12,20 V12 M15.5,20 V12"/>',
+ pilares:'<path d="M5,21 V10 a1.6,1.6 0 0 1 3.2,0 V21"/><path d="M10.4,21 V6 a1.6,1.6 0 0 1 3.2,0 V21"/><path d="M15.8,21 V11 a1.6,1.6 0 0 1 3.2,0 V21"/>',
+ karst:'<path d="M2,17 Q6,7 10,17"/><path d="M8,17 Q13,5 18,17"/><path d="M15,17 Q19,9 22,17"/><path d="M2,20 q2,1.2 4,0 t4,0 t4,0 t4,0"/>',
+ perla:'<path d="M12,1.5 V19"/><circle cx="12" cy="6.5" r="2.3"/><circle cx="12" cy="12" r="1.6"/><path d="M12,17 L8,21 M12,17 L16,21 M8,21 H16"/>'
+};
+function monIc(n){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(MONU[n]||"")+'</svg>';}
+const CIUDADES_MAPA=[
+ {label:"Pekín",match:"Beijing",x:699.8,y:277.4,mon:"muralla",lp:"r"},
+ {label:"Xi'an",match:"Xi'an",x:578.3,y:390.6,mon:"guerrero",lp:"l"},
+ {label:"Chengdu",match:"Chengdu",x:498.7,y:463.1,mon:"panda",lp:"l"},
+ {label:"Chongqing",match:"Chongqing",x:539.2,y:485.2,mon:"hongya",lp:"b"},
+ {label:"Zhangjiajie",match:"Zhangjiajie",x:603.3,y:494.1,mon:"pilares",lp:"r"},
+ {label:"Guilin",match:"Guilin",x:600.2,y:571.5,mon:"karst",lp:"b"},
+ {label:"Shanghai",match:"Shanghai",x:782.5,y:451.7,mon:"perla",lp:"l"}
+];
+function primerDiaCiudad(match){
+  let i=VIAJE.dias.findIndex(d=>d.ciudad===match);
+  if(i<0)i=VIAJE.dias.findIndex(d=>(d.ciudades||[]).indexOf(match)>=0);
+  return i<0?0:i;}
+function renderHome(){
+  const el=document.getElementById("home");if(!el)return;
+  const k=kmInfo();
+  let pins="";
+  CIUDADES_MAPA.forEach((c,idx)=>{
+    const L=(c.x/VB_W*100).toFixed(1), T=(c.y/VB_H*100).toFixed(1);
+    pins+='<button class="mpin lp-'+c.lp+'" style="left:'+L+'%;top:'+T+'%" data-city="'+idx+'">'
+      +'<span class="mdot">'+monIc(c.mon)+'</span><span class="mlbl">'+c.label+'</span></button>';
+  });
+  el.innerHTML='<div class="homeinner">'
+    +'<div class="hometop"><div class="hometitle">China 2026</div><div class="homesub">29 jul – 24 ago · Enrique y Elena</div></div>'
+    +'<div class="homemap"><svg viewBox="0 0 '+VB_W+' '+VB_H+'" preserveAspectRatio="xMidYMid meet"><path class="chland" d="'+CHINA_PATH+'"/></svg>'+pins+'</div>'
+    +'<div class="homekm">'+ic("footprints")+'<div><b>'+fmtKm(k.rec)+'</b> recorridos<span>de '+fmtKm(k.tot)+' · vuelos incluidos</span></div></div>'
+    +'<button class="homego" id="homeGo">'+ic("calendar")+' Ver el itinerario de hoy</button>'
+    +'</div>';
+  el.querySelectorAll(".mpin").forEach(b=>b.onclick=()=>{const c=CIUDADES_MAPA[+b.dataset.city];current=primerDiaCiudad(c.match);ultimoDia=current;hideHome();render();window.scrollTo(0,0);});
+  const go=el.querySelector("#homeGo");if(go)go.onclick=()=>{current=diaDeHoy();ultimoDia=current;hideHome();render();window.scrollTo(0,0);};
+}
+function showHome(){const el=document.getElementById("home");if(!el)return;renderHome();el.classList.add("show");document.body.classList.add("homeon");}
+function hideHome(){const el=document.getElementById("home");if(el)el.classList.remove("show");document.body.classList.remove("homeon");}
+
 function render(){renderNav();if(current===-1)renderGastos();else if(current===-2)renderComer();else renderDay();}
 
 function renderDay(){
@@ -1088,6 +1210,7 @@ function renderDay(){
   const ciuTit=(day.ciudades&&day.ciudades.length?day.ciudades:[day.ciudad]).join(" · ");
   let h='<div class="dayhead"><div class="date">'+day.fecha+' · '+day.diaSemana+'</div><div class="city disp">'+ciuTit+'</div></div>';
   h+='<div class="startedit">'+ic("clock","g")+' Empieza el día a las <input id="startInput" type="time" value="'+(d.start||day.horaInicio)+'"></div>';
+  h+=kmLineHTML();
   if(day.nota)h+='<div class="note">'+ic("info","g")+'<span>'+day.nota+'</span></div>';
   h+='<button class="mapbtn" id="mapToggle">'+ic("map","g")+' Ver mapa del día · ruta numerada</button>';
   h+='<div class="mapwrap" id="mapWrap"><div id="mapCanvas"></div><div class="maphint">Mapa Amap (con conexión) · arrastra o pellizca · toca un pin para ver info</div>'
@@ -1479,7 +1602,10 @@ function openCal(){
 }
 
 render();
+showHome();   /* pantalla de inicio (mapa) cada vez que se abre; el itinerario queda detrás */
 setupSearch();
+/* Tocar el "China" + pin de la cabecera vuelve a la pantalla de inicio (el mapa). */
+["brandIcon","brandTxt"].forEach(idn=>{const b=document.getElementById(idn);if(b)b.onclick=showHome;});
 /* lo que ya hubiera guardado en este móvil entra en el registro antes de traer nada de fuera */
 stampChanges();
 document.getElementById("syncBtn").onclick=()=>{if(!sb)syncDialog();else doSync();};
@@ -1489,7 +1615,12 @@ if(sb)doSync(true);
 window.addEventListener("online",()=>{if(sb)doSync(true);});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&sb)doSync(true);});
 document.getElementById("verBtn").onclick=()=>chkVer();
-if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+if("serviceWorker" in navigator){
+  /* Solo recargamos cuando el SW nuevo toma el control Y fue el usuario quien pidió actualizar
+     (si no, la primera visita —cuando el SW reclama por primera vez— entraría en bucle de recarga). */
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(updIniciado)recargaUpd();});
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>
